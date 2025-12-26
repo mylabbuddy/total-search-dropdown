@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Test Search Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+        }
+
+        .custom-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+
+        .dropdown-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .side-popup {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(100%);
+        }
+
+        .side-popup.active {
+            transform: translateX(0);
+        }
+
+        .overlay {
+            display: none;
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(2px);
+        }
+
+        .overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Search Container -->
+    <div class="w-full max-w-lg">
+        <h1 class="text-3xl font-light text-gray-800 mb-8 text-center tracking-tight">Diagnostic Search</h1>
+        
+        <div class="relative mb-4">
+            <div class="flex gap-2">
+                <div class="relative flex-1">
+                    <input 
+                        type="text" 
+                        id="testInput" 
+                        placeholder="Search for tests (e.g. CBC)..." 
+                        class="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all custom-shadow"
+                        autocomplete="off"
+                    >
+                    <!-- Dropdown -->
+                    <div id="dropdown" class="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl border border-gray-100 hidden z-50 custom-shadow overflow-hidden">
+                        <!-- Items populated by JS -->
+                    </div>
+                </div>
+                <button id="searchBtn" class="bg-black text-white px-8 py-4 rounded-2xl hover:bg-gray-800 transition-colors font-medium">
+                    Search
+                </button>
+            </div>
+        </div>
+
+        <!-- Selected Chips -->
+        <div id="selectedChips" class="flex flex-wrap gap-2 mb-6 min-h-[40px]">
+            <!-- Chips populated by JS -->
+        </div>
+    </div>
+
+    <!-- Main Results Modal -->
+    <div id="resultsOverlay" class="overlay fixed inset-0 z-[60]">
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl p-8 max-w-md w-full custom-shadow relative">
+                <button onclick="closeModals()" class="absolute top-6 right-6 text-gray-400 hover:text-black">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+                <h2 class="text-xl font-semibold mb-6">Price Summary</h2>
+                
+                <div class="grid grid-cols-1 gap-4" id="summaryGrid">
+                    <!-- Summary Buttons -->
+                    <button onclick="showBreakdown('spc')" class="flex justify-between items-center p-4 rounded-xl border border-gray-100 hover:bg-blue-50 transition-colors group">
+                        <span class="text-gray-500 font-medium">Total SPC</span>
+                        <span id="total-spc" class="text-lg font-semibold text-blue-600">₹0</span>
+                    </button>
+                    <button onclick="showBreakdown('msp')" class="flex justify-between items-center p-4 rounded-xl border border-gray-100 hover:bg-purple-50 transition-colors group">
+                        <span class="text-gray-500 font-medium">Total MSP</span>
+                        <span id="total-msp" class="text-lg font-semibold text-purple-600">₹0</span>
+                    </button>
+                    <button onclick="showBreakdown('discounted_price')" class="flex justify-between items-center p-4 rounded-xl border border-gray-100 hover:bg-green-50 transition-colors group">
+                        <span class="text-gray-500 font-medium">Discounted Total</span>
+                        <span id="total-discounted" class="text-lg font-semibold text-green-600">₹0</span>
+                    </button>
+                    <button onclick="showBreakdown('mrp')" class="flex justify-between items-center p-4 rounded-xl border border-gray-100 hover:bg-red-50 transition-colors group">
+                        <span class="text-gray-500 font-medium">Total MRP</span>
+                        <span id="total-mrp" class="text-lg font-semibold text-red-600">₹0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Breakdown Popup -->
+    <div id="sidePopup" class="side-popup fixed right-0 top-0 h-full w-full max-w-xs bg-white z-[100] custom-shadow p-8 flex flex-col">
+        <div class="flex justify-between items-center mb-8">
+            <h3 class="text-xl font-semibold" id="breakdownTitle">Breakdown</h3>
+            <button onclick="hideSidePopup()" class="text-gray-400 hover:text-black">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+        </div>
+        <div id="breakdownList" class="flex-1 overflow-y-auto space-y-4">
+            <!-- Breakdown items populated by JS -->
+        </div>
+        <div class="pt-6 border-t border-gray-100 mt-auto">
+            <div class="flex justify-between font-bold text-lg">
+                <span>Total</span>
+                <span id="breakdownTotal">₹0</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JSON Mock Data
+        const testData = [
+            { id: 'CBC', name: 'Complete Blood Count (CBC)', spc: 60, msp: 200, discounted_price: 250, mrp: 350 },
+            { id: 'LFT', name: 'Liver Function Test (LFT)', spc: 80, msp: 220, discounted_price: 350, mrp: 500 },
+            { id: 'KFT', name: 'Kidney Function Test (KFT)', spc: 100, msp: 250, discounted_price: 400, mrp: 800 }
+        ];
+
+        const state = {
+            selectedTests: [],
+            inputFocused: false
+        };
+
+        const testInput = document.getElementById('testInput');
+        const dropdown = document.getElementById('dropdown');
+        const chipContainer = document.getElementById('selectedChips');
+        const searchBtn = document.getElementById('searchBtn');
+
+        // Initialize UI
+        function renderDropdown() {
+            dropdown.innerHTML = '';
+            // Only show tests not already selected
+            const available = testData.filter(t => !state.selectedTests.find(st => st.id === t.id));
+            
+            if (available.length === 0) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            available.forEach(test => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item p-4 cursor-pointer text-gray-700 transition-colors text-sm';
+                item.textContent = test.name;
+                item.onclick = () => addTest(test);
+                dropdown.appendChild(item);
+            });
+            
+            if (state.inputFocused) dropdown.classList.remove('hidden');
+        }
+
+        function addTest(test) {
+            if (!state.selectedTests.find(t => t.id === test.id)) {
+                state.selectedTests.push(test);
+                renderChips();
+                testInput.value = '';
+                dropdown.classList.add('hidden');
+            }
+        }
+
+        function removeTest(testId) {
+            state.selectedTests = state.selectedTests.filter(t => t.id !== testId);
+            renderChips();
+        }
+
+        function renderChips() {
+            chipContainer.innerHTML = '';
+            state.selectedTests.forEach(test => {
+                const chip = document.createElement('div');
+                chip.className = 'bg-gray-100 text-gray-800 px-3 py-1.5 rounded-full text-sm flex items-center gap-2 border border-gray-200 animate-in fade-in zoom-in duration-200';
+                chip.innerHTML = `
+                    <span>${test.id}</span>
+                    <button onclick="removeTest('${test.id}')" class="hover:text-red-500 font-bold leading-none">&times;</button>
+                `;
+                chipContainer.appendChild(chip);
+            });
+        }
+
+        // Search Logic
+        searchBtn.onclick = () => {
+            if (state.selectedTests.length === 0) {
+                alert('Please select at least one test.');
+                return;
+            }
+
+            const totals = state.selectedTests.reduce((acc, curr) => {
+                acc.spc += curr.spc;
+                acc.msp += curr.msp;
+                acc.discounted += curr.discounted_price;
+                acc.mrp += curr.mrp;
+                return acc;
+            }, { spc: 0, msp: 0, discounted: 0, mrp: 0 });
+
+            document.getElementById('total-spc').textContent = `₹${totals.spc}`;
+            document.getElementById('total-msp').textContent = `₹${totals.msp}`;
+            document.getElementById('total-discounted').textContent = `₹${totals.discounted}`;
+            document.getElementById('total-mrp').textContent = `₹${totals.mrp}`;
+
+            document.getElementById('resultsOverlay').classList.add('active');
+        };
+
+        // Breakdown Logic
+        function showBreakdown(key) {
+            const list = document.getElementById('breakdownList');
+            const title = document.getElementById('breakdownTitle');
+            const totalDisplay = document.getElementById('breakdownTotal');
+            
+            list.innerHTML = '';
+            title.textContent = key.replace('_', ' ').toUpperCase() + ' Breakdown';
+            
+            let sum = 0;
+            state.selectedTests.forEach(test => {
+                const val = test[key];
+                sum += val;
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center py-2 border-b border-gray-50';
+                item.innerHTML = `
+                    <div class="text-sm font-medium text-gray-700">${test.id}</div>
+                    <div class="text-sm text-gray-500">₹${val}</div>
+                `;
+                list.appendChild(item);
+            });
+
+            totalDisplay.textContent = `₹${sum}`;
+            document.getElementById('sidePopup').classList.add('active');
+        }
+
+        function hideSidePopup() {
+            document.getElementById('sidePopup').classList.remove('active');
+        }
+
+        function closeModals() {
+            document.getElementById('resultsOverlay').classList.remove('active');
+            hideSidePopup();
+        }
+
+        // Input Events
+        testInput.onfocus = () => {
+            state.inputFocused = true;
+            renderDropdown();
+        };
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!testInput.contains(e.target) && !dropdown.contains(e.target)) {
+                state.inputFocused = false;
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        // Search filtering for dropdown (Optional improvement)
+        testInput.oninput = (e) => {
+            const val = e.target.value.toLowerCase();
+            const items = dropdown.querySelectorAll('.dropdown-item');
+            items.forEach(item => {
+                if (item.textContent.toLowerCase().includes(val)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        };
+    </script>
+</body>
+</html>
